@@ -13,8 +13,14 @@ function uploadFiles() {
             const compressed = pako.deflate(data);
             const base64Compressed = btoa(String.fromCharCode(...compressed));
 
-            localStorage.setItem(file.name, base64Compressed);
-            displayFile(file.name);
+            const fileData = {
+                name: file.name,
+                type: file.type,
+                data: base64Compressed
+            };
+
+            localStorage.setItem(file.name, JSON.stringify(fileData));
+            displayFile(fileData);
         };
         reader.readAsArrayBuffer(file);
     }
@@ -22,42 +28,41 @@ function uploadFiles() {
 
 function loadFiles() {
     for (let i = 0; i < localStorage.length; i++) {
-        const fileName = localStorage.key(i);
-        displayFile(fileName);
+        const fileData = JSON.parse(localStorage.getItem(localStorage.key(i)));
+        displayFile(fileData);
     }
 }
 
-function displayFile(fileName) {
+function displayFile(fileData) {
     const fileList = document.getElementById('fileList');
 
     const fileItem = document.createElement('div');
     fileItem.className = 'file-item';
-    fileItem.textContent = fileName;
+    fileItem.textContent = fileData.name;
 
     const downloadButton = document.createElement('button');
     downloadButton.textContent = 'Download';
-    downloadButton.onclick = () => downloadFile(fileName);
+    downloadButton.onclick = () => downloadFile(fileData);
 
     const deleteButton = document.createElement('button');
     deleteButton.textContent = 'Delete';
-    deleteButton.onclick = () => deleteFile(fileName, fileItem);
+    deleteButton.onclick = () => deleteFile(fileData.name, fileItem);
 
     fileItem.appendChild(downloadButton);
     fileItem.appendChild(deleteButton);
     fileList.appendChild(fileItem);
 }
 
-function downloadFile(fileName) {
-    const base64Compressed = localStorage.getItem(fileName);
-    const compressed = Uint8Array.from(atob(base64Compressed), c => c.charCodeAt(0));
+function downloadFile(fileData) {
+    const compressed = Uint8Array.from(atob(fileData.data), c => c.charCodeAt(0));
     const decompressed = pako.inflate(compressed);
 
-    const blob = new Blob([decompressed]);
+    const blob = new Blob([decompressed], { type: fileData.type });
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement('a');
     a.href = url;
-    a.download = fileName;
+    a.download = fileData.name;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
